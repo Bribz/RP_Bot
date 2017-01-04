@@ -1,0 +1,7 @@
+*.sln
+MUDBot/packages.config
+MUDBot/App.config
+MUDBot/bin/
+MUDBot/obj/
+packages/
+MUDBot/Properties/AssemblyInfo.cs
