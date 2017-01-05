@@ -11,6 +11,7 @@ namespace MUDBot
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("Test");
             /*
             
             GameUser g = new GameUser();
@@ -34,13 +35,26 @@ namespace MUDBot
             Console.ReadKey();
             */
 
+            /*
             DataManager.WriteJson(new MUDObject("Rock", 0, 20, 
                 new string[] { "An ordinary rock.", "Nothing special about it.", "A pretty normal looking rock.", "It's still just a rock." }, 
                 new string[] { "You swing at the rock.", "You hack at the rock.", "You hit the rock." },
                 new string[] { "It smashes to pieces.", "It breaks into bits.", "It shatters into fragments." },
                 0, CharacterStat.Str, 10));
+            */
+
+            Console.Title = "Mortal World : RP Bot";
             
             Bot bot = new Bot();
+            /*
+            while (bot.running)
+            {
+                Task.Delay(3000);
+            }
+
+            bot = null;
+            */
+            Console.ReadKey();
         }
     }
 }

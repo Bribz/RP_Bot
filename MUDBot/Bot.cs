@@ -20,16 +20,20 @@ namespace MUDBot
         private Server _server;
         private MUDWorld GameWorld;
         private ServerData SERVER_DATA;
+        public bool running;
         
         public Bot()
         {
+            
+            running = true;
             _client = new DiscordClient(x =>
             {
                 x.LogLevel = LogSeverity.Info;
                 x.LogHandler = Log;
             });
-            
+
             InitializeBot();
+            
         }
 
         /// <summary>
@@ -38,7 +42,9 @@ namespace MUDBot
         private void InitializeBot()
         {
             SERVER_DATA = DataManager.ReadServerDetails();
-            
+
+            Console.ReadKey();
+
             _client.ExecuteAndWait( async () =>
             {
                 await _client.Connect(SERVER_DATA.Token, TokenType.Bot);
@@ -49,9 +55,6 @@ namespace MUDBot
                 SetUpWorld();
                 SetUpCommands();
             });
-
-
-            GameWorld.Shutdown();
         }
 
         private void SetUpWorld()
@@ -59,9 +62,6 @@ namespace MUDBot
             GameWorld = new MUDWorld(_server);
             
             _client.UserUpdated += GameWorld.UserUpdatedCallback;
-
-
-            var embed = new EmbedBuilder();
         }
 
         private void SetUpCommands()
@@ -188,6 +188,7 @@ namespace MUDBot
             _client.Dispose();
 
             _client = null;
+            running = false;
         }
     }
 }
