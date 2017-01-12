@@ -4,19 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
+using Discord.WebSocket;
 using Discord.Commands;
 using Discord.Net;
-using Discord.Modules;
-using Discord.Legacy;
-using Discord.ETF;
 using Discord.API;
+using Discord.Rest;
+using Discord.Addons.InteractiveCommands;
 
 namespace MUDBot
 {
     public class MUDWorld
     {
         private List<GameUser> Users;
-        private Server server;
+        private SocketGuild server;
         public ChannelManager ChannelManager;
         public CombatManager CombatManager;
         public PartyManager PartyManager;
@@ -25,7 +25,7 @@ namespace MUDBot
         private bool ready;
         internal int MUDSize = 5;
 
-        public MUDWorld(Server _server)
+        public MUDWorld(SocketGuild _server)
         {
             Users = DataManager.ReadAllUsers();
             server = _server;
@@ -60,6 +60,7 @@ namespace MUDBot
             Console.WriteLine("Done!");
         }
 
+        /*
         public async Task GetCharacterStats(CommandEventArgs e)
         {
             Message post = null;
@@ -86,6 +87,7 @@ namespace MUDBot
                 await post.Delete();
             }
         }
+        */
 
         public int RollDice(string inputValue)
         {
@@ -110,6 +112,7 @@ namespace MUDBot
             return total;
         }
 
+        /*
         public async Task CreateParty(CommandEventArgs e)
         {
             GameUser p1 = FindGameUser(e.User.Id);
@@ -189,12 +192,9 @@ namespace MUDBot
                 PartyManager.RemoveFromParty(new CombatMember(user.Character, user), user.PartyID, e.Channel);
             }
         }
+        */
 
-        public async Task NPCMessage(Channel ch, string Msg)
-        {
-            
-        }
-
+        /*
         public async Task MoveZoneSpace(CommandEventArgs e)
         {
 
@@ -262,6 +262,7 @@ namespace MUDBot
                 
             }
         }
+        */
 
         public int RollDice(int dieType, int numberDice = 1)
         {
@@ -286,7 +287,7 @@ namespace MUDBot
             return !(Users.Exists(x => x.Character.Name == name));
         }
 
-        private GameUser FindOrCreateNewUser(Discord.User input)
+        private GameUser FindOrCreateNewUser(SocketGuildUser input)
         {
             GameUser user = Users.Find(x => x.DiscordUserID == input.Id);
             if  (user == null)
@@ -298,32 +299,37 @@ namespace MUDBot
             return user;
         }
 
-        public async void UserUpdatedCallback(object sender, UserUpdatedEventArgs e)
+        
+        public async Task UserUpdatedCallback(SocketUser before, SocketUser after)
         {
+            SocketGuildUser Before = before as SocketGuildUser;
+            SocketGuildUser After = after as SocketGuildUser;
+
             if (!ready)
                 return;
-            if(e.Before.Nickname != e.After.Nickname)
+            
+            if(Before.Nickname != After.Nickname)
             {
-                GameUser user = FindOrCreateNewUser(e.After);
+                GameUser user = FindOrCreateNewUser(After);
                 if (user.Character != null && user.CharacterCreation == -1)
                 {
-                    user.Character.ForceNameChange(e.After.Nickname);
+                    user.Character.ForceNameChange(After.Nickname);
                 }
             }
-
-            if (e.After.VoiceChannel != e.Before.VoiceChannel)
+            
+            if (After.VoiceChannel != Before.VoiceChannel)
             {
-                if (e.After.VoiceChannel != null && e.After.VoiceChannel.Name == "Online")
+                if (After.VoiceChannel != null && After.VoiceChannel.Name == "Online")
                 {
-                    if (e.Before.VoiceChannel == null || e.Before.VoiceChannel.Name == "Offline")
+                    if (Before.VoiceChannel == null || Before.VoiceChannel.Name == "Offline")
                     {
-                        GameUser user = FindOrCreateNewUser(e.After);
+                        GameUser user = FindOrCreateNewUser(After);
                         user.Online = true;
                         Console.WriteLine("User logged in!");
                         if (user.Character == null)
                         {
-                            Channel newChannel = await ChannelManager.CreatePrivateChannel(e.After);
-                            HandleNewUser(user, newChannel);
+                            SocketGuildChannel newChannel = await ChannelManager.CreatePrivateChannel(After) as SocketGuildChannel;
+                            //HandleNewUser(user, newChannel);
                         }
                         else
                         {
@@ -331,15 +337,15 @@ namespace MUDBot
                         }
                     }
                 }
-                else if (e.After.VoiceChannel == null || e.After.VoiceChannel.Name == "Offline")
+                else if (After.VoiceChannel == null || After.VoiceChannel.Name == "Offline")
                 {
-                    if (e.Before.VoiceChannel != null && e.Before.VoiceChannel.Name == "Online")
+                    if (Before.VoiceChannel != null && Before.VoiceChannel.Name == "Online")
                     {
-                        GameUser user = FindOrCreateNewUser(e.After);
+                        GameUser user = FindOrCreateNewUser(After);
                         user.Online = false;
                         user.inCombat = false;
                         if(user.Character != null && ZoneManager.GetZone(user.Character.Zone).ZoneChannel != null)
-                        ChannelManager.LeaveChannel(e.After, ZoneManager.GetZone(user.Character.Zone).ZoneChannel);
+                        ChannelManager.LeaveChannel(After, ZoneManager.GetZone(user.Character.Zone).ZoneChannel as SocketTextChannel);
                         //DataManager.WriteJson(user);
                         Console.WriteLine("User logged out!");
                     }
@@ -347,22 +353,114 @@ namespace MUDBot
             }
         }
 
-        private async void HandleNewUser(GameUser user, Channel newChannel)
+        public static EmbedBuilder BuildCharacterEmbed()
+        {
+            var embed = new EmbedBuilder();
+            embed.Color = new Color(104, 128, 173);
+            embed.Title = "Character Stat Sheet";
+            return embed;
+        }
+
+        public static string BuildCharacterString(Character character, CharSheetType sheetType = CharSheetType.Complete)
+        {
+            #region CharacterInfo
+            string retStr 
+                = $"Name: {character.Name}\n";
+
+            if ((sheetType & CharSheetType.CharInfo) == CharSheetType.CharInfo)
+                retStr += $"Gender: {character.Gender}\n";
+            
+            if ((sheetType & CharSheetType.CharInfoVerbose) == CharSheetType.CharInfoVerbose)
+                retStr += $"Profession: {character.Profession}\n";
+
+            //if ((sheetType & CharSheetType.CharInfoVerbose) == CharSheetType.CharInfoVerbose)
+            //    retStr += $"Affinities: {character.Profession}\n";
+
+            if ((sheetType & CharSheetType.CharInfoVerbose) == CharSheetType.CharInfoVerbose)
+                retStr += $"Description: {character.Desc}\n";
+            
+            #endregion
+
+            retStr += "\n";
+
+            if ((sheetType & CharSheetType.Stats) == CharSheetType.Stats || (sheetType & CharSheetType.StatsVerbose) == CharSheetType.StatsVerbose)
+                retStr += "Stats: \n";
+            #region StatBlock
+            if ((sheetType & CharSheetType.StatsVerbose) == CharSheetType.StatsVerbose)
+                retStr += $"Health: {character.CurrentHealth}/{character.Health}\n\n";
+            else if ((sheetType & CharSheetType.Stats) == CharSheetType.Stats)
+                retStr += $"Health: {character.Health}\n\n";
+
+            if ((sheetType & CharSheetType.StatsVerbose) == CharSheetType.StatsVerbose)
+                retStr += $"Strength: {character.CurrentStrength}/{character.Strength}\n";
+            else if ((sheetType & CharSheetType.Stats) == CharSheetType.Stats)
+                retStr += $"Strength: {character.Strength}\n";
+
+            if ((sheetType & CharSheetType.StatsVerbose) == CharSheetType.StatsVerbose)
+                retStr += $"Dexterity: {character.CurrentDexterity}/{character.Dexterity}\n";
+            else if ((sheetType & CharSheetType.Stats) == CharSheetType.Stats)
+                retStr += $"Dexterity: {character.Dexterity}\n";
+
+            if ((sheetType & CharSheetType.StatsVerbose) == CharSheetType.StatsVerbose)
+                retStr += $"Intelligence: {character.CurrentIntelligence}/{character.Intelligence}\n\n";
+            else if ((sheetType & CharSheetType.Stats) == CharSheetType.Stats)
+                retStr += $"Intelligence: {character.Intelligence}\n\n";
+
+            if ((sheetType & CharSheetType.StatsVerbose) == CharSheetType.StatsVerbose)
+                retStr += $"Mana: {character.CurrentMana}/{character.Mana}\n";
+            else if ((sheetType & CharSheetType.Stats) == CharSheetType.Stats)
+                retStr += $"Mana: {character.Mana}\n";
+
+            #endregion 
+
+            retStr += "\n";
+
+            if ((sheetType & CharSheetType.Experience) == CharSheetType.Experience)
+                retStr += $"Experience: {character.Experience}\n";
+
+
+            return retStr;
+        }
+
+
+        public static EmbedBuilder BuildNpcEmbed(string subtext, string responderName = null, string ThumbnailURL = null)
+        {
+            var embed = new EmbedBuilder();
+            embed.Color = new Color(104, 128, 173);
+            //embed.ThumbnailUrl = "http://i104.photobucket.com/albums/m161/kai7735/MortalWorldICON_zpst6sya4so.png";
+            if(ThumbnailURL != null)
+            {
+                embed.ThumbnailUrl = ThumbnailURL;
+            }
+            //embed.Description = "Pong!";
+            if(subtext != null)
+            {
+                embed.Footer = new EmbedFooterBuilder() { Text = subtext };
+            }
+            
+            embed.Author = new EmbedAuthorBuilder() { IconUrl = "http://i104.photobucket.com/albums/m161/kai7735/MortalWorldICON_zpst6sya4so.png", Name = responderName!=null?responderName:"NPC" };
+            embed.Build();
+
+            return embed;
+        }
+        
+        /*
+        private async void HandleNewUser(GameUser user, SocketTextChannel newChannel)
         {
             string proposedName = "";
             Gender proposedGender = Gender.Female;
-            User discordUser = server.GetUser(user.DiscordUserID);
-            await newChannel.SendMessage($"**Welcome to {server.Name}.**\n\n Many adventures and mishaps await you in the world, as you will soon discover.\n\nFor all rules, see {server.GetChannel(260853439695683584).Mention} for details.");
+            SocketGuildUser discordUser = server.GetUser(user.DiscordUserID);
+
+            await newChannel.SendMessageAsync($"**Welcome to {server.Name}.**\n\n Many adventures and mishaps await you in the world, as you will soon discover.\n\nFor all rules, see {server.GetChannel(260853439695683584).Mention} for details.");
             
-            await newChannel.SendIsTyping();
             
             await Task.Delay(5000);
-            Message tmp = await newChannel.SendMessage($"\"For you, {server.GetUser(user.DiscordUserID).NicknameMention}, humble beginnings await your character.\"\n\"But first and foremost, are you a Boy, Girl, or Neither?\"\n*Choices:* ***Boy***, ***Girl***, ***Neither***");
-            await newChannel.AddPermissionsRule(discordUser, new ChannelPermissionOverrides(readMessages: PermValue.Allow, sendMessages: PermValue.Allow));
-            DateTime origTimeStamp = tmp.Timestamp;
+            RestUserMessage tmp = await newChannel.SendMessageAsync($"\"For you, {server.GetUser(user.DiscordUserID).Mention}, humble beginnings await your character.\"\n\"But first and foremost, are you a Boy, Girl, or Neither?\"\n*Choices:* ***Boy***, ***Girl***, ***Neither***");
+            await newChannel.AddPermissionOverwriteAsync(discordUser, new ChannelPermissionOverrides(readMessages: PermValue.Allow, sendMessages: PermValue.Allow));
+            DateTimeOffset origTimeStamp = tmp.Timestamp;
             int timeout = 300;
             await Task.Delay(2000);
-            Message[] buffer;
+            SocketUserMessage[] buffer;
 
             while (user.CharacterCreation == 0)
             {
@@ -739,5 +837,6 @@ namespace MUDBot
             user.CharacterCreation = -1;
             DataManager.WriteJson(user);
         }
+        */
     }
 }

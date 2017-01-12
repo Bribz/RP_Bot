@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Discord.WebSocket;
 
 namespace MUDBot
 {
@@ -54,14 +55,14 @@ namespace MUDBot
             cooldown = _cooldown;
         }
 
-        public async void Interact(GameUser user, Channel channel)
+        public async void Interact(GameUser user, SocketTextChannel channel)
         {
             InteractUserData timestamp = interactData.Find(x => x.UserDiscordID == user.DiscordUserID);
             if (timestamp != null)
             {
                 if((DateTime.Now - timestamp.Timestamp).Seconds <= cooldown )
                 {
-                    await channel.SendMessage("It is too soon to do that again!");
+                    await channel.SendMessageAsync("It is too soon to do that again!");
                     return;
                 }
                 else
@@ -72,16 +73,16 @@ namespace MUDBot
             Random r = new Random();
             int it = r.Next(Description.Length);
 
-            await channel.SendMessage(Description[it]);
+            await channel.SendMessageAsync(Description[it]);
 
             if(InteractDamage > 0)
             {
-                await channel.SendMessage($"You take {InteractDamage} damage.");
+                await channel.SendMessageAsync($"You take {InteractDamage} damage.");
                 user.Character.Damage(InteractDamage);
             }
             else if(InteractDamage < 0)
             {
-                await channel.SendMessage($"You heal {InteractDamage} health.");
+                await channel.SendMessageAsync($"You heal {InteractDamage} health.");
                 user.Character.Damage(InteractDamage);
             }
 
@@ -89,14 +90,14 @@ namespace MUDBot
             await Task.Delay(0);
         }
 
-        public async void Attack(GameUser user, Channel channel)
+        public async void Attack(GameUser user, SocketTextChannel channel)
         {
             InteractUserData timestamp = interactData.Find(x => x.UserDiscordID == user.DiscordUserID);
             if (timestamp != null)
             {
                 if ((DateTime.Now - timestamp.Timestamp).Seconds <= cooldown)
                 {
-                    await channel.SendMessage("It is too soon to do that again!");
+                    await channel.SendMessageAsync("It is too soon to do that again!");
                     return;
                 }
                 else
@@ -140,7 +141,7 @@ namespace MUDBot
                 descriptor += DestroyDescription[it];
             }
 
-            await channel.SendMessage(descriptor);
+            await channel.SendMessageAsync(descriptor);
 
             interactData.Add(new InteractUserData(user.DiscordUserID, DateTime.Now));
         }

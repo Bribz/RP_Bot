@@ -4,14 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
+using Discord.WebSocket;
+using Discord.Rest;
 
 namespace MUDBot
 {
     public class ChannelManager
     {
         private MUDWorld world;
-        private Server Server;
-        private List<Channel> Channels;
+        private SocketGuild Server;
+        private List<IGuildChannel> Channels;
         private ulong[] BypassedChannels = 
             {
                 /*landing_page*/    260889740432113666,
@@ -22,7 +24,7 @@ namespace MUDBot
             };
 
         //client.GetServer(260853439695683584);
-        public ChannelManager(Server _server, MUDWorld _world)
+        public ChannelManager(SocketGuild _server, MUDWorld _world)
         {
             Server = _server;
             world = _world;
@@ -35,14 +37,21 @@ namespace MUDBot
             {
                 if(!BypassedChannels.Contains(Channels[i].Id))
                 {
-                    Channels[i].Delete();
+                    Channels[i].DeleteAsync();
                 }
             }
         }
 
         public void Initialize()
         {
-            Channels = Server.AllChannels.ToList();
+            List<IGuildChannel> tmp = new List<IGuildChannel>();
+
+            foreach (var ch in Server.Channels)
+            {
+                tmp.Add(ch as IGuildChannel);
+            }
+
+            Channels = tmp;
 
             for (int i = 0; i < Channels.Count; i++)
             {
@@ -64,65 +73,67 @@ namespace MUDBot
             //this should be zero. if not, figure out what to do later.
         }
 
-        public async void LeaveChannel(User user, Channel channel)
+        public async void LeaveChannel(SocketGuildUser user, SocketTextChannel channel)
         {
             if (user == null || channel == null) return;
 
-            await channel.SendMessage($"A set of magical rings spiral {world.FindGameUser(user.Id).Character.Name} as {GlobalValues.Pronoun(world.FindGameUser(user.Id).Character.Gender)} begins to fade from view.");
+            await channel.SendMessageAsync($"A set of magical rings spiral {world.FindGameUser(user.Id).Character.Name} as {GlobalValues.Pronoun(world.FindGameUser(user.Id).Character.Gender)} begins to fade from view.");
             await Task.Delay(4000);
-            await channel.RemovePermissionsRule(user);
+            await channel.RemovePermissionOverwriteAsync(user);
         }
 
-        public async Task<Channel> CreatePrivateChannel(User user)
+        public async Task<IGuildChannel> CreatePrivateChannel(SocketGuildUser user)
         {
-            Channel newChannel = await Server.CreateChannel(user.Id.ToString(), ChannelType.Text);
-            await newChannel.AddPermissionsRule(Server.EveryoneRole, new ChannelPermissionOverrides(readMessages: PermValue.Deny, readMessageHistory:PermValue.Deny, sendMessages: PermValue.Deny));
-            await newChannel.AddPermissionsRule(Server.FindRoles("Moderator", true).FirstOrDefault(), new ChannelPermissionOverrides(readMessages: PermValue.Allow, sendMessages: PermValue.Allow));
-            await newChannel.AddPermissionsRule(user, new ChannelPermissionOverrides(readMessages: PermValue.Allow, sendMessages: PermValue.Allow, readMessageHistory: PermValue.Allow));
-            await newChannel.AddPermissionsRule(Server.FindRoles("NPC", true).FirstOrDefault(), new ChannelPermissionOverrides(readMessageHistory: PermValue.Allow, readMessages: PermValue.Allow, sendMessages: PermValue.Allow, mentionEveryone: PermValue.Allow, manageNicknames: PermValue.Allow, manageChannel: PermValue.Allow, manageMessages: PermValue.Allow));
-            Channels.Add(newChannel);
+            IGuildChannel newChannel = await Server.CreateTextChannelAsync(user.Id.ToString());
+
+            await newChannel.AddPermissionOverwriteAsync(Server.EveryoneRole, new OverwritePermissions(readMessages: PermValue.Deny, readMessageHistory: PermValue.Deny, sendMessages: PermValue.Deny));
+            await newChannel.AddPermissionOverwriteAsync(Server.Roles.FirstOrDefault(x=>x.Name.Equals("Moderator")), new OverwritePermissions(readMessages: PermValue.Allow, sendMessages: PermValue.Allow));
+            await newChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(readMessages: PermValue.Allow, sendMessages: PermValue.Allow, readMessageHistory: PermValue.Allow));
+            await newChannel.AddPermissionOverwriteAsync(Server.Roles.FirstOrDefault(x => x.Name.Equals("NPC")), new OverwritePermissions(readMessageHistory: PermValue.Allow, readMessages: PermValue.Allow, sendMessages: PermValue.Allow, mentionEveryone: PermValue.Allow, manageChannel: PermValue.Allow, manageMessages: PermValue.Allow));
+            
+            Channels.Add(newChannel as IGuildChannel);
             return newChannel;
         }
 
-        public async void DeleteChannel(Channel target)
+        public async void DeleteChannel(SocketTextChannel target)
         {
-            await target.SendMessage("Channel will now delete...");
+            await target.SendMessageAsync("Channel will now delete...");
             await Task.Delay(8000);
             Channels.Remove(target);
-            await target.Delete();
+            await target.DeleteAsync();
         }
 
-        public async Task ChangeChannel(ulong userID, Vector2 location, Channel currentChannel = null)
+        public async Task ChangeChannel(ulong userID, Vector2 location, SocketGuildChannel currentChannel = null)
         {
-            User user = Server.GetUser(userID);
+            SocketGuildUser user = Server.GetUser(userID);
 
-            Channel nChannel = null;
+            RestGuildChannel nChannel = null;
 
             foreach(var c in Channels)
             {
                 if(c.Name.Equals("zone_"+location.ToGridDigit(world.MUDSize).ToString()))
                 {
-                    nChannel = c;
+                    nChannel = c as RestTextChannel;
                     break;
                 }
             }
 
             if(nChannel == null)
             {
-                nChannel = await Server.CreateChannel($"zone_{location.ToGridDigit(world.MUDSize).ToString()}", ChannelType.Text);
-                await nChannel.AddPermissionsRule(Server.EveryoneRole, new ChannelPermissionOverrides(readMessages:PermValue.Deny, readMessageHistory: PermValue.Deny, sendMessages:PermValue.Deny));
-                await nChannel.AddPermissionsRule(Server.FindRoles("NPC", true).FirstOrDefault(), new ChannelPermissionOverrides(readMessageHistory:PermValue.Allow, readMessages:PermValue.Allow, sendMessages:PermValue.Allow, mentionEveryone:PermValue.Allow, manageNicknames: PermValue.Allow, manageChannel:PermValue.Allow, manageMessages:PermValue.Allow));
-                await nChannel.AddPermissionsRule(Server.FindRoles("Moderator", true).FirstOrDefault(), new ChannelPermissionOverrides(readMessageHistory: PermValue.Allow, readMessages: PermValue.Allow, sendMessages: PermValue.Allow, changeNickname: PermValue.Allow, manageMessages: PermValue.Allow, manageNicknames: PermValue.Allow, mentionEveryone:PermValue.Allow));
-                Console.WriteLine("All permissions " + nChannel.PermissionOverwrites.ToString());
+                nChannel = await Server.CreateTextChannelAsync($"zone_{location.ToGridDigit(world.MUDSize).ToString()}");
+                await nChannel.AddPermissionOverwriteAsync(Server.EveryoneRole, new OverwritePermissions(readMessages:PermValue.Deny, readMessageHistory: PermValue.Deny, sendMessages:PermValue.Deny));
+                await nChannel.AddPermissionOverwriteAsync(Server.Roles.FirstOrDefault(x=>x.Name.Equals("NPC")), new OverwritePermissions(readMessageHistory:PermValue.Allow, readMessages:PermValue.Allow, sendMessages:PermValue.Allow, mentionEveryone:PermValue.Allow, manageChannel:PermValue.Allow, manageMessages:PermValue.Allow));
+                await nChannel.AddPermissionOverwriteAsync(Server.Roles.FirstOrDefault(x=>x.Name.Equals("Moderator")), new OverwritePermissions(readMessageHistory: PermValue.Allow, readMessages: PermValue.Allow, sendMessages: PermValue.Allow, manageMessages: PermValue.Allow, mentionEveryone:PermValue.Allow));
+                //Console.WriteLine("All permissions " + nChannel.PermissionOverwrites.ToString());
                 world.ZoneManager.SetZoneChannel(location, nChannel);
                 Channels.Add(nChannel);
             }
-            var nPermAllow = new ChannelPermissionOverrides(readMessages: PermValue.Allow, readMessageHistory: PermValue.Allow, sendMessages: PermValue.Allow);
-            await nChannel.AddPermissionsRule(user, nPermAllow);
+            var nPermAllow = new OverwritePermissions(readMessages: PermValue.Allow, readMessageHistory: PermValue.Allow, sendMessages: PermValue.Allow);
+            await nChannel.AddPermissionOverwriteAsync(user, nPermAllow);
 
             if(currentChannel != null && !BypassedChannels.Contains(currentChannel.Id))
             {
-                await (currentChannel.RemovePermissionsRule(user));
+                await (currentChannel.RemovePermissionOverwriteAsync(user));
                 if (currentChannel.Users.Count() == 0)
                 {
                     if (currentChannel.Name != user.Id.ToString())
@@ -133,7 +144,7 @@ namespace MUDBot
                             world.ZoneManager.RemoveZoneChannel(zoneID);
                         }
                     }
-                    DeleteChannel(currentChannel);
+                    DeleteChannel(currentChannel as SocketTextChannel);
                 }
             }
         }

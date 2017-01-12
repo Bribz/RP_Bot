@@ -4,17 +4,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
+using Discord.WebSocket;
 
 namespace MUDBot
 {
     public class ZoneManager
     {
-        private Server server;
+        private SocketGuild server;
         private MUDWorld world;
         private List<Zone> Zones;
         private int MUDSize;
 
-        public ZoneManager(Server _server, MUDWorld _world)
+        public ZoneManager(SocketGuild _server, MUDWorld _world)
         {
             server = _server;
             world = _world;
@@ -40,12 +41,12 @@ namespace MUDBot
             return Zones[zoneID.ToGridDigit(MUDSize)];
         }
 
-        public void SetZoneChannel(Vector2 zoneID, Channel channel)
+        public void SetZoneChannel(Vector2 zoneID, IGuildChannel channel)
         {
             Zones[zoneID.ToGridDigit(MUDSize)].SetChannel(channel); 
         }
 
-        public void SetZoneChannel(int zoneID, Channel channel)
+        public void SetZoneChannel(int zoneID, IGuildChannel channel)
         {
             Zones[zoneID].SetChannel(channel);
         }
@@ -75,22 +76,22 @@ namespace MUDBot
             {
                 if(verbose)
                 {
-                    await Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel.SendMessage($"{server.GetUser(user.DiscordUserID).NicknameMention},\n\n *your traveling brings you upon {Zones[zoneID.ToGridDigit(MUDSize)].Description}.*");
+                    await (Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel as SocketTextChannel).SendMessageAsync($"{server.GetUser(user.DiscordUserID).Mention},\n\n *your traveling brings you upon {Zones[zoneID.ToGridDigit(MUDSize)].Description}.*");
                 }
                 else
                 {
-                    await Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel.SendMessage($"{server.GetUser(user.DiscordUserID).NicknameMention} accompanies you.");
+                    await (Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel as SocketTextChannel).SendMessageAsync($"{server.GetUser(user.DiscordUserID).Mention} accompanies you.");
                 }
             }
             else
             {
                 if(verbose)
                 {
-                    await Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel.SendMessage($"{server.GetUser(user.DiscordUserID).NicknameMention},\n\n *{descriptorPrefix} {Zones[zoneID.ToGridDigit(MUDSize)].Description}.*");
+                    await (Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel as SocketTextChannel).SendMessageAsync($"{server.GetUser(user.DiscordUserID).Mention},\n\n *{descriptorPrefix} {Zones[zoneID.ToGridDigit(MUDSize)].Description}.*");
                 }
                 else
                 {
-                    await Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel.SendMessage($"{server.GetUser(user.DiscordUserID).NicknameMention} accompanies you.");
+                    await (Zones[zoneID.ToGridDigit(MUDSize)].ZoneChannel as SocketTextChannel).SendMessageAsync($"{server.GetUser(user.DiscordUserID).Mention} accompanies you.");
                 }
             }
         }
@@ -108,11 +109,11 @@ namespace MUDBot
             Zones[zoneID].AddPlayer(user);
             if (descriptorPrefix == null)
             {
-                await Zones[zoneID].ZoneChannel.SendMessage($"{server.GetUser(user.DiscordUserID).NicknameMention},\n\n *your traveling brings you upon {Zones[zoneID].Description}.*");
+                await (Zones[zoneID].ZoneChannel as SocketTextChannel).SendMessageAsync($"{server.GetUser(user.DiscordUserID).Mention},\n\n *your traveling brings you upon {Zones[zoneID].Description}.*");
             }
             else
             {
-                await Zones[zoneID].ZoneChannel.SendMessage($"{server.GetUser(user.DiscordUserID).NicknameMention},\n\n *{descriptorPrefix} {Zones[zoneID].Description}.*");
+                await (Zones[zoneID].ZoneChannel as SocketTextChannel).SendMessageAsync($"{server.GetUser(user.DiscordUserID).Mention},\n\n *{descriptorPrefix} {Zones[zoneID].Description}.*");
             }
         }
     }

@@ -1,16 +1,17 @@
-﻿using Discord;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Discord;
+using Discord.WebSocket;
 
 namespace MUDBot
 {
     public class CombatInstance
     {
         private MUDWorld world;
-        private Channel c;
+        private SocketTextChannel c;
         private List<CombatMember> participants;
         private int currentTurn;
         bool combatStarted;
@@ -92,7 +93,7 @@ namespace MUDBot
                 return false;
         }
 
-        public async void NextTurn(Channel channel)
+        public async void NextTurn(SocketTextChannel channel)
         {
             currentTurn++;
             if(currentTurn >= participants.Count)
@@ -102,7 +103,7 @@ namespace MUDBot
 
             if(participants[currentTurn].playerID != 0)
             {
-                await channel.SendMessage($"{channel.GetUser(participants[currentTurn].playerID).Nickname}, it is now your turn!");
+                await channel.SendMessageAsync($"{channel.GetUser(participants[currentTurn].playerID).Nickname}, it is now your turn!");
             }
             else
             {
@@ -110,13 +111,13 @@ namespace MUDBot
             }
         }
 
-        private async void HandleNPCTurn(Channel channel)
+        private async void HandleNPCTurn(SocketTextChannel channel)
         {
-            await channel.SendMessage("ERROR: not yet implemented.");
+            await channel.SendMessageAsync("ERROR: not yet implemented.");
             NextTurn(channel);
         }
 
-        public async void LeaveCombatInstance(Character c, Channel channel)
+        public async void LeaveCombatInstance(Character c, SocketTextChannel channel)
         {
             CombatMember mb = participants.Find(x => x.stats == c);
             if(mb == null)

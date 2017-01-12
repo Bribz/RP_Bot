@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Discord;
+using Discord.WebSocket;
 
 namespace MUDBot
 {
@@ -24,7 +25,7 @@ namespace MUDBot
         public string Description;
 
         [JsonIgnore]
-        public Channel ZoneChannel;
+        public SocketGuildChannel ZoneChannel;
 
         [JsonProperty("Location")]
         public Vector2 ZoneID;
@@ -58,9 +59,9 @@ namespace MUDBot
             }
         }
 
-        public void SetChannel(Channel zoneChannel)
+        public void SetChannel(IGuildChannel zoneChannel)
         {
-            ZoneChannel = zoneChannel;
+            ZoneChannel = zoneChannel as SocketGuildChannel;
         }
 
         public void RemoveChannel()

@@ -44,8 +44,8 @@ namespace MUDBot
             */
 
             Console.Title = "Mortal World : RP Bot";
-            
-            Bot bot = new Bot();
+
+            Bot bot = Bot.instance;
             /*
             while (bot.running)
             {

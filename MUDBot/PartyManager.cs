@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
+using Discord.WebSocket;
 
 namespace MUDBot
 {
@@ -45,7 +46,7 @@ namespace MUDBot
             }
         }
 
-        public async void JoinParty(CombatMember member, Channel channel, int partyID)
+        public async void JoinParty(CombatMember member, SocketTextChannel channel, int partyID)
         {
             Party party = GetParty(partyID);
             if(party == null)
@@ -55,7 +56,7 @@ namespace MUDBot
 
             party.AddToParty(member);
 
-            await channel.SendMessage($"{member.stats.Name} has joined the Party!");
+            await channel.SendMessageAsync($"{member.stats.Name} has joined the Party!");
         }
 
         public Party GetParty(int partyID)
@@ -71,7 +72,7 @@ namespace MUDBot
             
         }
 
-        public async Task CreateParty(CombatMember p1, CombatMember p2, Channel channel)
+        public async Task CreateParty(CombatMember p1, CombatMember p2, SocketTextChannel channel)
         {
             List<CombatMember> memberData = new List<CombatMember>();
             memberData.Add(p1);
@@ -109,12 +110,12 @@ namespace MUDBot
                 }
             }
 
-            await (channel.SendMessage($"{p1.stats.Name} and {p2.stats.Name} are now in a party!"));
+            await (channel.SendMessageAsync($"{p1.stats.Name} and {p2.stats.Name} are now in a party!"));
 
             DataManager.WriteJson(party, nextPartyID);
         }
 
-        public async void RemoveFromParty(CombatMember member, int partyID, Channel channel)
+        public async void RemoveFromParty(CombatMember member, int partyID, SocketTextChannel channel)
         {
             Party party = GetParty(partyID);
             party.RemoveFromParty(member);
@@ -124,7 +125,7 @@ namespace MUDBot
                 world.FindGameUser(member.playerID).PartyID = Party.NotInParty;
             }
 
-            await channel.SendMessage($"{member.stats.Name} has left the party.");
+            await channel.SendMessageAsync($"{member.stats.Name} has left the party.");
 
             if(party.GetPartyCount() <= 1)
             {
@@ -132,7 +133,7 @@ namespace MUDBot
             }
         }   
 
-        public async void DisbandParty(int partyID, Channel channel)
+        public async void DisbandParty(int partyID, SocketTextChannel channel)
         {
             nextPartyID = partyID;
 
@@ -145,7 +146,7 @@ namespace MUDBot
             }
             
 
-            await channel.SendMessage("The party has been disbanded.");
+            await channel.SendMessageAsync("The party has been disbanded.");
 
             DataManager.DeletePartyJson(partyID);
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Discord.WebSocket;
 
 namespace MUDBot
 {
@@ -35,14 +36,14 @@ namespace MUDBot
             PartyID = Party.NotInParty;
         }
 
-        public GameUser(Discord.User user)
+        public GameUser(SocketGuildUser user)
         {
             DiscordUserID = user.Id;
             traveling = false;
             PartyID = Party.NotInParty;
         }
 
-        public GameUser(Discord.User user, Character character)
+        public GameUser(SocketGuildUser user, Character character)
         {
             DiscordUserID = user.Id;
             Character = character;

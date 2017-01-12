@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Discord;
 using Newtonsoft.Json;
+using Discord.WebSocket;
 
 namespace MUDBot
 {
@@ -42,7 +43,7 @@ namespace MUDBot
             PartyMembers.Remove(member);
         }
 
-        public async void PartyDetails(Channel channel)
+        public async void PartyDetails(SocketTextChannel channel)
         {
             string List = "Members in party: \n";
 
@@ -51,7 +52,7 @@ namespace MUDBot
                 List += $"{v.stats.Name}";
             }
 
-            await channel.SendMessage(List);
+            await channel.SendMessageAsync(List);
         }
 
         public List<CombatMember> GetPartyMembers()
@@ -64,13 +65,13 @@ namespace MUDBot
             return PartyMembers.Count;
         }
 
-        public async void JoinBattle(CombatInstance instance, Channel channel, MUDWorld world)
+        public async void JoinBattle(CombatInstance instance, SocketTextChannel channel, MUDWorld world)
         {
             foreach(var pm in PartyMembers)
             {
                 if (world.FindGameUser(pm.playerID).inCombat)
                 {
-                    await channel.SendMessage("Your party is already in combat!");
+                    await channel.SendMessageAsync("Your party is already in combat!");
                     return;
                 }
             }
@@ -79,18 +80,18 @@ namespace MUDBot
             {
                 
                 instance.JoinCombatInstance(new CombatMember(pm.stats,world.FindGameUser(pm.playerID)));
-                await channel.SendMessage($"{pm.stats.Name} has joined the fight!");
+                await channel.SendMessageAsync($"{pm.stats.Name} has joined the fight!");
                 world.FindGameUser(pm.playerID).inCombat = true;
             }
         }
 
-        public async void LeaveBattle(CombatInstance instance, Channel channel, MUDWorld world)
+        public async void LeaveBattle(CombatInstance instance, SocketTextChannel channel, MUDWorld world)
         {
             foreach (var pm in PartyMembers)
             {
                 instance.LeaveCombatInstance(pm.stats, channel);
                 world.FindGameUser(pm.playerID).inCombat = false;
-                await channel.SendMessage($"{pm.stats.Name} has left the fight!");
+                await channel.SendMessageAsync($"{pm.stats.Name} has left the fight!");
             }
         }
     }
